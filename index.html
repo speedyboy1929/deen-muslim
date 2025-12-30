@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<title>Deen Muslim – Daily Discipline</title>
+
+<style>
+:root{
+  --c1:#051F20;
+  --c2:#0B2B26;
+  --c3:#163832;
+  --c4:#235347;
+  --c5:#8EB69B;
+}
+
+body{
+  margin:0;
+  font-family:"Segoe UI",sans-serif;
+  background:
+    linear-gradient(rgba(5,31,32,.9),rgba(35,83,71,.95)),
+    url("makkah.jpg") center/cover no-repeat fixed;
+  color:#fff;
+  max-width:430px;
+  margin:auto;
+  padding:16px;
+}
+
+/* HEADER */
+header{
+  text-align:center;
+  padding:18px;
+  background:rgba(11,43,38,.85);
+  border-radius:18px;
+  font-size:20px;
+  color:var(--c5);
+  box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+
+/* CARD */
+.card{
+  background:rgba(22,56,50,.88);
+  margin-top:14px;
+  padding:16px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+h3{
+  color:var(--c5);
+  font-size:15px;
+  border-bottom:1px solid var(--c5);
+  padding-bottom:6px;
+  margin-bottom:10px;
+}
+
+/* TASK */
+.task{
+  display:flex;
+  gap:10px;
+  background:rgba(0,0,0,.25);
+  padding:10px;
+  border-radius:14px;
+  margin-bottom:8px;
+}
+
+.task input{
+  width:22px;
+  height:22px;
+  accent-color:var(--c5);
+}
+
+.completed{
+  text-decoration:line-through;
+  color:#c7ead9;
+}
+
+/* ACTIVE NAMAZ */
+.active-namaz{
+  border:2px solid var(--c5);
+  box-shadow:0 0 15px var(--c5);
+}
+
+/* PROGRESS BAR */
+.bar{
+  height:12px;
+  background:#000;
+  border-radius:10px;
+  overflow:hidden;
+}
+.bar span{
+  display:block;
+  height:100%;
+  background:var(--c5);
+  width:0%;
+}
+
+/* BUTTON */
+button{
+  width:100%;
+  background:var(--c5);
+  border:none;
+  padding:10px;
+  border-radius:12px;
+  font-weight:600;
+}
+
+.footer{
+  text-align:center;
+  font-size:12px;
+  margin:20px 0;
+}
+</style>
+</head>
+
+<body>
+
+<header>☪ DEEN MUSLIM</header>
+
+<div class="card" id="location">📍 Detecting location...</div>
+<div class="card" id="prayer">🕌 Loading prayer times...</div>
+
+<div class="card active-namaz" id="currentNamaz">
+<h3>🕋 Current Namaz</h3>
+<p id="nowPrayer">Detecting...</p>
+</div>
+
+<div id="tasks"></div>
+
+<div class="card">
+<h3>📊 Weekly Discipline</h3>
+<div class="bar"><span id="progress"></span></div>
+<p id="percent">0% Completed</p>
+</div>
+
+<div class="card">
+<h3>🌙 Ramadan Mode</h3>
+<button onclick="toggleRamadan()">Activate Ramadan Mode</button>
+<p id="ramadanStatus"></p>
+</div>
+
+<div class="footer">
+❝ Allah helps those who strive ❞
+</div>
+
+<script>
+/* LOCATION */
+navigator.geolocation.getCurrentPosition(()=>{
+ document.getElementById("location").innerText="📍 Pakistan";
+});
+
+/* PRAYER TIMES + CURRENT */
+fetch("https://api.aladhan.com/v1/timingsByCity?city=Chishtian&country=Pakistan&method=2")
+.then(r=>r.json())
+.then(d=>{
+ const t=d.data.timings;
+ document.getElementById("prayer").innerHTML=
+ `Fajr ${t.Fajr} | Zuhr ${t.Dhuhr} | Asr ${t.Asr} | Maghrib ${t.Maghrib} | Isha ${t.Isha}`;
+
+ const now=new Date();
+ const current=now.getHours()*60+now.getMinutes();
+
+ const map={
+  Fajr:t.Fajr,
+  Dhuhr:t.Dhuhr,
+  Asr:t.Asr,
+  Maghrib:t.Maghrib,
+  Isha:t.Isha
+ };
+
+ for(let p in map){
+  let [h,m]=map[p].split(":");
+  let time=parseInt(h)*60+parseInt(m);
+  if(current<time){
+   document.getElementById("nowPrayer").innerText=p;
+   break;
+  }
+ }
+});
+
+/* TASKS */
+const sections=[
+["Morning",["Fajr","Quran","Exercise"]],
+["Day",["Lowered Gaze","Work Focus","Zuhr"]],
+["Evening",["Asr","Family Time","Maghrib"]],
+["Night",["Isha","Witr","No Phone"]]
+];
+
+let total=0,done=0;
+const container=document.getElementById("tasks");
+
+sections.forEach((s,i)=>{
+ const card=document.createElement("div");
+ card.className="card";
+ card.innerHTML=`<h3>${s[0]}</h3>`;
+ s[1].forEach((t,j)=>{
+  total++;
+  const key=`k_${i}_${j}`;
+  const saved=localStorage.getItem(key)==="1";
+  if(saved) done++;
+
+  const row=document.createElement("div");
+  row.className="task";
+  row.innerHTML=`<input type="checkbox" ${saved?"checked":""}><span>${t}</span>`;
+  if(saved) row.children[1].classList.add("completed");
+
+  row.children[0].onchange=e=>{
+   localStorage.setItem(key,e.target.checked?"1":"0");
+   location.reload();
+  };
+
+  card.appendChild(row);
+ });
+ container.appendChild(card);
+});
+
+/* PROGRESS */
+let percent=Math.round((done/total)*100);
+document.getElementById("progress").style.width=percent+"%";
+document.getElementById("percent").innerText=percent+"% Completed";
+
+/* RAMADAN MODE */
+function toggleRamadan(){
+ localStorage.setItem("ramadan","on");
+ document.getElementById("ramadanStatus").innerText=
+ "🌙 Ramadan Mode Active – Fast, Control, Ibadah";
+}
+</script>
+
+</body>
+</html>
